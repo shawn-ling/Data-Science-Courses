@@ -1,6 +1,8 @@
-best <- function(state, outcome) {
+rankhospital <- function(state, outcome, num = "best") {
+
+  ## Check that state and outcome are valid
   ## Check file name
-  error <- FALSE
+
   file_exits <- sum(dir() == "outcome-of-care-measures.csv")
   if(file_exits == 0) stop("Invalid file")
   
@@ -14,18 +16,28 @@ best <- function(state, outcome) {
   else
     ##outcome invalid
     stop("Invalid outcome")
-
+  
   sel_outcome <- read.csv("outcome-of-care-measures.csv", colClasses = "character")
   sel_outcome <- sel_outcome[sel_outcome$State == state, ]
   ##No data found for the state input
   if(nrow(sel_outcome) == 0) stop("Invalid state")
-    
+  
   sel_outcome[, outcome] <- as.numeric(sel_outcome[, outcome])
   sel_outcome <- sel_outcome[!is.na(sel_outcome[, outcome]), ]
-  best_hosp <- sel_outcome$Hospital.Name[sel_outcome[, outcome] == min(sel_outcome[, outcome])]
-  if(length(best_hosp) > 1){best_hosp <- min(best_hosp)}
-  best_hosp
+  if(nrow(sel_outcome) == 0)
+    return("NA")
+  else{
+    sel_outcome <- sel_outcome[order(sel_outcome[, outcome], sel_outcome$Hospital.Name), ]
+    if(num == "best")
+      num <- 1
+    else if(num == "worst")
+      num <- nrow(sel_outcome)
+    num <- as.numeric(num)
+    if(num > nrow(sel_outcome) | num < 1) return("NA")
+    hosp <- sel_outcome$Hospital.Name[num]
+    return(hosp)
+  }
 
-  ## Return hospital name in that state with lowest 30-day death
-  ## rate
+  ## Return hospital name in that state with the given rank
+  ## 30-day death rate
 }

@@ -1,91 +1,132 @@
-
 submit <- local({
+        checkResult <- function(r, name = c("best", "rankhospital", "rankall")) {
+                name <- match.arg(name)
+                if(name == "best" || name == "rankhospital") {
+                        if(length(r) == 1L && is.na(r))
+                                return(r)
+                        if(!is.character(r))
+                                stop(sprintf("'%s' did not return a character vector",
+                                             name))
+                        if(!length(r))
+                                stop(sprintf("'%s' returned character vector of length 0", name))
+                        if(length(r) > 1)
+                                stop(sprintf("'%s' returned a character vector of length > 1", name))
+                }
+                else if(name == "rankall") {
+                        if(!is.data.frame(r))
+                                stop(sprintf("'%s' did not return a data frame", name))
+                        if(ncol(r) != 2L)
+                                stop(sprintf("'%s' should return data frame with exactly 2 columns", name))
+                        if(!all(names(r) %in% c("hospital", "state")))
+                                stop("column names of data frame should be 'hospital' and 'state'")
+                }
+                r
+        }
         getOutput <- function(sid) {
                 ## JUST FOR TESTING
                 ## sid <- sub("-dev", "", sid, fixed = TRUE)
-                if(sid == "pollutantmean-1") {
-                        source("pollutantmean.R")
-                        pollutantmean("specdata", "sulfate", 1:10)
+                if(sid == "best-1") {
+                        source("best.R", local = TRUE)
+                        cat("Running test:\n")
+                        cat("best(\"SC\", \"heart attack\")\n")
+                        r <- best("SC", "heart attack")
+                        checkResult(r, "best")
                 }
-                else if(sid == "pollutantmean-2") {
-                        source("pollutantmean.R")
-                        pollutantmean("specdata", "nitrate", 70:72)
+                else if(sid == "best-2") {
+                        source("best.R", local = TRUE)
+                        cat("Running test:\n")
+                        cat("best(\"NY\", \"pneumonia\")\n")
+                        r <- best("NY", "pneumonia")
+                        checkResult(r, "best")
                 }
-                else if(sid == "pollutantmean-3") {
-                        source("pollutantmean.R")
-                        pollutantmean("specdata", "sulfate", 34)
+                else if(sid == "best-3") {
+                        source("best.R", local = TRUE)
+                        cat("Running test:\n")
+                        cat("best(\"NN\", \"pneumonia\")\n")
+                        r <- tryCatch(best("NN", "pneumonia"), error = function(e) e)
+                        if(!inherits(r, "error"))
+                                stop("'best' should throw an error via the 'stop' function in this case")
+                        tolower(conditionMessage(r))
                 }
-                else if(sid == "pollutantmean-4") {
-                        source("pollutantmean.R")
-                        pollutantmean("specdata", "nitrate")
+                else if(sid == "rankhospital-1") {
+                        source("rankhospital.R", local = TRUE)
+                        cat("Running test:\n")
+                        cat("rankhospital(\"NC\", \"heart attack\", \"worst\")\n")
+                        r <- rankhospital("NC", "heart attack", "worst")
+                        checkResult(r, "rankhospital")
                 }
-                else if(sid == "complete-1") {
-                        source("complete.R")
-                        cc <- complete("specdata", c(6, 10, 20, 34, 100, 200, 310))
-                        paste(cc$nobs, collapse = "\n")
+                else if(sid == "rankhospital-2") {
+                        source("rankhospital.R", local = TRUE)
+                        cat("Running test:\n")
+                        cat("rankhospital(\"WA\", \"heart attack\", 7)\n")
+                        r <- rankhospital("WA", "heart attack", 7)
+                        checkResult(r, "rankhospital")
                 }
-                else if(sid == "complete-2") {
-                        source("complete.R")
-                        cc <- complete("specdata", 54)
-                        cc$nobs
+                else if(sid == "rankhospital-3") {
+                        source("rankhospital.R", local = TRUE)
+                        cat("Running test:\n")
+                        cat("rankhospital(\"WA\", \"pneumonia\", 1000)\n")
+                        rankhospital("WA", "pneumonia", 1000)
                 }
-                else if(sid == "complete-3") {
-                        source("complete.R")
-                        set.seed(42)
-                        cc <- complete("specdata", 332:1)
-                        use <- sample(332, 10)
-                        paste(cc[use, "nobs"], collapse = "\n")                
+                else if(sid == "rankhospital-4") {
+                        source("rankhospital.R", local = TRUE)
+                        cat("Running test:\n")
+                        cat("rankhospital(\"NY\", \"heart attak\", 7)\n")
+                        r <- tryCatch({
+                                rankhospital("NY", "heart attak", 7)
+                        }, error = function(e) {
+                                e
+                        })
+                        if(!inherits(r, "error"))
+                                stop("'rankhospital' should throw an error via 'stop' in this case")
+                        tolower(conditionMessage(r))
                 }
-                else if(sid == "corr-1") {
-                        source("corr.R")
-                        cr <- corr("specdata")
-                        cr <- sort(cr)
-                        set.seed(868)
-                        out <- round(cr[sample(length(cr), 5)], 4)
-                        paste(out, collapse = "\n")
+                else if(sid == "rankall-1") {
+                        source("rankall.R", local = TRUE)
+                        cat("Running test:\n")
+                        cat("rankall(\"heart attack\", 4)\n")
+                        r <- rankall("heart attack", 4)
+                        r <- checkResult(r, "rankall")
+                        as.character(subset(r, state == "HI")$hospital)
                 }
-                else if(sid == "corr-2") {
-                        source("corr.R")
-                        cr <- corr("specdata", 129)
-                        cr <- sort(cr)
-                        n <- length(cr)
-                        set.seed(197)
-                        out <- c(n, round(cr[sample(n, 5)], 4))
-                        paste(out, collapse = "\n")
-                        
+                else if(sid == "rankall-2") {
+                        source("rankall.R", local = TRUE)
+                        cat("Running test:\n")
+                        cat("rankall(\"pneumonia\", \"worst\")\n")
+                        r <- rankall("pneumonia", "worst")
+                        r <- checkResult(r, "rankall")
+                        as.character(subset(r, state == "NJ")$hospital)
                 }
-                else if(sid == "corr-3") {
-                        source("corr.R")
-                        cr <- corr("specdata", 2000)
-                        n <- length(cr)
-                        cr <- corr("specdata", 1000)
-                        cr <- sort(cr)
-                        paste(c(n, round(cr, 4)), collapse = "\n")
+                else if(sid == "rankall-3") {
+                        source("rankall.R", local = TRUE)
+                        cat("Running test:\n")
+                        cat("rankall(\"heart failure\", 10)\n")
+                        r <- rankall("heart failure", 10)
+                        r <- checkResult(r, "rankall")
+                        as.character(subset(r, state == "NV")$hospital)
                 }
                 else {
                         stop("invalid part number")
                 }
         }
         partPrompt <- function() {
-                partlist <- list("pollutantmean-1" = "'pollutantmean' part 1",
-                                 "pollutantmean-2" = "'pollutantmean' part 2",
-                                 "pollutantmean-3" = "'pollutantmean' part 3",
-                                 "pollutantmean-4" = "'pollutantmean' part 4",
-                                 "complete-1" = "'complete' part 1",
-                                 "complete-2" = "'complete' part 2",
-                                 "complete-3" = "'complete' part 3",
-                                 "corr-1" = "'corr' part 1",
-                                 "corr-2" = "'corr' part 2",
-                                 "corr-3" = "'corr' part 3"
+                partlist <- list("best-1" = "'best' part 1",
+                                 "best-2" = "'best' part 2",
+                                 "best-3" = "'best' part 3",
+                                 "rankhospital-1" = "'rankhospital' part 1",
+                                 "rankhospital-2" = "'rankhospital' part 2",
+                                 "rankhospital-3" = "'rankhospital' part 3",
+                                 "rankhospital-4" = "'rankhospital' part 4",
+                                 "rankall-1" = "'rankall' part 1",
+                                 "rankall-2" = "'rankall' part 2",
+                                 "rankall-3" = "'rankall' part 3"
                                  )
-                
                 pretty_out("Which part are you submitting?")
                 part <- select.list(partlist, graphics=FALSE)
                 names(part)
         }
         getChallenge <- function(email, challenge.url) {
-                params <- list(email_address = email,
-                               response_encoding = "delim")
+                params <- list(email_address = email, response_encoding = "delim")
                 result <- getForm(challenge.url, .params = params)
                 s <- strsplit(result, "|", fixed = TRUE)[[1]]
                 list(ch.key = s[5], state = s[7])
@@ -116,29 +157,29 @@ submit <- local({
                            "then your course ID would be 'rprog-001' (without the quotes).", skip_after=TRUE)
                 repeat {
                         courseid <- readline("Course ID: ")
-                        ## Remove quotes if there are any
+                                        # Remove quotes if there are any
                         courseid <- gsub("\'|\"", "", courseid)
-                        ## Set up test cases
+                                        # Set up test cases
                         is_url <- str_detect(courseid, "www[.]|http:|https:")
                         is_numbers <- str_detect(courseid, "^[0-9]+$")
                         is_example <- str_detect(courseid, fixed("rprog-001"))
                         
-                        ## Check if courseid is none of the bad things
+                                        # Check if courseid is none of the bad things
                         if(!any(is_url, is_numbers, is_example)){
                                 break
-                                ## courseid is one of the bad things
+                                        # courseid is one of the bad things
                         } else {
-                                ## Check if courseid is a url
+                                        # Check if courseid is a url
                                 if(is_url) {
                                         pretty_out("It looks like you entered a web address, which is not what I'm",
                                                    "looking for.")
                                 }
-                                ## Check if courseid is all numbers
+                                        # Check if courseid is all numbers
                                 if(is_numbers) {
                                         pretty_out("It looks like you entered a numeric ID, which is not what I'm",
                                                    "looking for.")
                                 }
-                                ## Check if the user stole the example courseid
+                                        # Check if the user stole the example courseid
                                 if(is_example) {
                                         pretty_out("It looks like you entered the Course ID that I used as an",
                                                    "example, which is not what I'm looking for.")
@@ -217,7 +258,7 @@ submit <- local({
                                 if(!confirmed) need2fix <- TRUE
                         }
                         
-                        ## Set urls based on confirmed courseid
+                                        # Set urls based on confirmed courseid
                         challenge.url <- paste("http://class.coursera.org", courseid,
                                                "assignment/challenge", sep = "/")
                         submit.url <- paste("http://class.coursera.org", courseid,
@@ -232,7 +273,7 @@ submit <- local({
                 if(!manual) {
                         ## Get challenge
                         ch <- try(getChallenge(email, challenge.url), silent=TRUE)
-                        ## Check if url is valid, i.e. challenge received
+                                        # Check if url is valid, i.e. challenge received
                         ch_ok <- !is(ch, "try-error") && exists("ch.key", ch) && !is.na(ch$ch.key)
                         if(!ch_ok) {
                                 stop("Either the course ID you entered is not valid or your course site ", 
@@ -257,4 +298,3 @@ submit <- local({
                 invisible()
         }
 })
-
