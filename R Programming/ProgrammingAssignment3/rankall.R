@@ -27,19 +27,28 @@ rankall <- function(outcome, num = "best") {
     sel_outcome <- sel_outcome[order(sel_outcome$State, 
                                      sel_outcome[, outcome], 
                                      sel_outcome$Hospital.Name), ]
-    r <- tapply(sel_outcome[, outcome], sel_outcome$State, rank)
     
-    if(num == "best")
-      num <- 1
-    else if(num == "worst")
-      num <- nrow(sel_outcome)
-    num <- as.numeric(num)
-    if(num > nrow(data_outcome) | num < 1) 
-      hosp <- "NA"
-    else
-      hosp <- sel_outcome$Hospital.Name[num]
-    result <- c(state, hosp)
-    output <- rbind(output, result)
+    result <- data.frame(hospital = c(NA), state = c(NA))
+    names(result) <- c("hospital", "state")
+    
+    for(s in vect_state){
+      state_outcome <- sel_outcome[sel_outcome$State == s, ]
+      r <- rank(state_outcome[, outcome], ties.method = "first")
+      if(num == "best")
+        num <- 1
+      else if(num == "worst")
+        num <- nrow(state_outcome)
+      num <- as.numeric(num)
+      if(num <= nrow(state_outcome))
+        hosp <- state_outcome$Hospital.Name[r == num]
+      else
+        hosp <- NA
+      result <- rbind(result, c(hosp, s))
+    }
+    
+    result <- result[2:nrow(result), ]
+    row.names(result) <- vect_state
+    return(result)
     
   }
   
